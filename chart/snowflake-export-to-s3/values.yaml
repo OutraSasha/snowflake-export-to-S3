@@ -1,0 +1,149 @@
+# Default values for ingress.
+# This is a YAML-formatted file.
+# Declare variables to be passed into your templates.
+
+replicaCount: 1
+
+image:
+  repository: "556432553668.dkr.ecr.eu-west-1.amazonaws.com/snowflake-export-to-s3"
+  pullPolicy: IfNotPresent
+  # Overrides the image tag whose default is the chart appVersion.
+  tag: ""
+
+imagePullSecrets: []
+nameOverride: ""
+fullnameOverride: ""
+
+pv:
+  enabled: true
+  volumes:
+    - name: sf-export-outbound
+      handle: fs-0d79b5eeab6be7999
+      storage: 20Gi
+      mountPath: /data
+
+namespace:
+  create: true
+
+serviceAccount:
+  # Specifies whether a service account should be created
+  create: true
+  # Annotations to add to the service account
+  annotations: {
+    eks.amazonaws.com/role-arn: arn:aws:iam::556432553668:role/OutraEKSETLArchiveRepositoryS3
+  }
+
+  # The name of the service account to use.
+  # If not set and create is true, a name is generated using the fullname template
+  name: "eks-snowflake-export-to-s3"
+
+podAnnotations:
+  fluentd.active: 'true'
+
+podSecurityContext: {}
+  # fsGroup: 2000
+
+securityContext: {}
+  # capabilities:
+  #   drop:
+  #   - ALL
+  # readOnlyRootFilesystem: true
+  # runAsNonRoot: true
+  # runAsUser: 1000
+
+command:
+args:
+
+service:
+  enabled: false
+  type: ClusterIP
+  port: 80
+
+gateway:
+  enabled: false
+  annotations: {}
+  hosts:
+    - snowflake-export-to-s3.k8s.outra.co.uk
+
+tls:
+  mode: SIMPLE
+
+overallTimeout: 30s
+
+# https://istio.io/latest/docs/reference/config/networking/virtual-service/#HTTPRetry
+retries: 
+  perTryTimeout: 8s
+  attempts: 3
+  retryOn: 5xx,gateway-error,retriable-4xx,retriable-status-codes,retriable-headers
+
+cert:
+  enabled: false
+  commonName: snowflake-export-to-s3.k8s.outra.co.uk
+
+resources: {}
+  # We usually recommend not to specify default resources and to leave this as a conscious
+  # choice for the user. This also increases chances charts run on environments with little
+  # resources, such as Minikube. If you do want to specify resources, uncomment the following
+  # lines, adjust them as necessary, and remove the curly braces after 'resources:'.
+  # limits:
+  #   cpu: 100m
+  #   memory: 128Mi
+  # requests:
+  #   cpu: 100m
+  #   memory: 128Mi
+
+autoscaling:
+  enabled: false
+  minReplicas: 1
+  maxReplicas: 100
+  targetCPUUtilizationPercentage: 80
+  # targetMemoryUtilizationPercentage: 80
+
+nodeSelector: {}
+
+tolerations: []
+
+affinity: {}
+
+storageClass:
+  install: false
+
+livenessProbe:
+  initialDelaySeconds: 20
+  successThreshold: 1
+  failureThreshold: 3
+  periodSeconds: 30
+  timeoutSeconds: 10
+readinessProbe:
+  initialDelaySeconds: 10
+  successThreshold: 1
+  failureThreshold: 3
+  periodSeconds: 30
+  timeoutSeconds: 10
+
+configMap:
+  mountPath: /config/snowflake-export-to-s3-config
+  fileName: config.yaml
+  # Everything under content is copied verbatim into your service's configmap.
+  content: {}
+
+cron:
+  enabled: true
+  schedules:
+    - schedule: '"5 6 5 * *"'
+      name: "cron-monthly5"      
+      extraEnvs: 
+        - name: CONFIG_FILE
+          value: "monthly5_export.json"
+        - name: SF_EXPORT_AREA
+          value: "ETL.ETL.OUTRA_DATA_ETL_S3_EXPORT"
+        - name: S3_EXPORT_BUCKET
+          value: "outra-prod-sf"
+        - name: S3_EXPORT_FOLDER
+          value: "snowflake/outbound"        
+        - name: SF_DATABASE
+          value: DATA_ENG  
+        - name: LOGLEVEL
+          value: "30"
+        
+    

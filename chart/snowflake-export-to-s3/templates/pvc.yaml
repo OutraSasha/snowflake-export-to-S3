@@ -1,0 +1,16 @@
+{{ if .Values.pv.enabled }}
+{{- range .Values.pv.volumes }}
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ .name }}
+spec:
+  accessModes:
+    - ReadWriteMany
+  storageClassName: efs-csi
+  resources:
+    requests:
+      storage: {{ .storage }}
+{{- end }}
+{{- end }}

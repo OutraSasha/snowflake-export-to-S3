@@ -1,0 +1,21 @@
+{{ if .Values.pv.enabled }}
+{{- range .Values.pv.volumes }}
+---
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: {{ .name  }}
+  # No namespace, PVs are global
+spec:
+  accessModes:
+  - ReadWriteMany
+  capacity:
+    storage: {{ .storage }}
+  volumeMode: Filesystem
+  persistentVolumeReclaimPolicy: Retain
+  storageClassName: efs-csi
+  csi:
+    driver: efs.csi.aws.com
+    volumeHandle: {{ .handle }}
+{{- end }}
+{{- end }}

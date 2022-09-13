@@ -1,0 +1,15 @@
+{
+  "exports":
+  [
+    {
+      "DATABASE": "ETL",
+      "SCHEMA": "ETL",
+      "TABLE": "ETL_CONTEXT"
+    },
+    {
+      "DATABASE": "ETL",
+      "SCHEMA": "STAGING",
+      "TABLE": "TAB_SALES"
+    }
+  ]
+}

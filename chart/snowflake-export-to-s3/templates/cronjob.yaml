@@ -1,0 +1,65 @@
+{{- if .Values.cron.enabled -}}
+{{- range  $.Values.cron.schedules }}
+---
+apiVersion: batch/v1beta1
+kind: CronJob
+metadata:
+  name: {{ .name }}
+  {{- with $.Values.podAnnotations }}
+  annotations:
+    {{- toYaml . | nindent 6 }}
+  {{- end }}
+spec:
+  schedule: {{ .schedule }}
+  jobTemplate:
+    spec:
+      backoffLimit: 0
+      template:
+        spec:
+          serviceAccountName: {{ $.Values.serviceAccount.name }}
+          containers:
+          - name: {{ $.Chart.Name }}
+            image: "{{ $.Values.image.repository }}:{{ $.Values.image.tag | default $.Chart.AppVersion }}"
+            imagePullPolicy: {{ $.Values.image.pullPolicy }} 
+            {{ if $.Values.pv.enabled }}
+            volumeMounts:
+            {{- range  $.Values.pv.volumes }}
+            - name: {{ .name  }}
+              mountPath: {{ .mountPath  }}
+            {{- end }}
+            {{- end }}
+            env: 
+            - name: SF_WAREHOUSE
+              value: ETL            
+            - name: SF_SCHEMA
+              value: ETL
+            - name: LOGLEVEL
+              value: "30"
+            - name: SF_ACCOUNT
+              value: outra.eu-west-1
+            - name: SF_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: snowflake-outra
+                  key: user 
+            - name: SF_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: snowflake-outra
+                  key: password 
+            - name: BUCKET_NAME
+              value: outra-prod-etl
+            {{- with  .extraEnvs }}
+              {{- . | toYaml | nindent 12 -}}
+            {{- end }}
+          {{ if $.Values.pv.enabled }}
+          volumes:
+          {{- range  $.Values.pv.volumes }}
+          - name: {{ .name  }}
+            persistentVolumeClaim:
+              claimName: {{ .name  }}
+          {{- end }}       
+          {{- end }}         
+          restartPolicy: Never
+{{- end }}
+{{- end }}
